@@ -130,22 +130,58 @@ Heap heap_create(Memory *mem, u64 size)
     return heap;
 }
 
-inline Block *heap_next_free_block(Heap *heap)
+inline Block *block_next_free_block(Block *block)
 {
-    return *(Block **)((u8 *)heap->free_list + sizeof(Block));
+    return *(Block **)((u8 *)block + sizeof(Block));
+}
+
+Block *heap_best_fit(Heap *heap, u64 size)
+{
+    Block *free_block = heap->free_list;
+    Block *prev = 0;
+    Block *best_fit = 0;
+    Block *best_fit_prev = 0;
+    while(free_block)
+    {
+        if(!best_fit && free_block->size >= size)
+        {
+            best_fit_prev = prev;
+            best_fit = free_block;
+        } 
+        else if(best_fit && free_block->size >= size && best_fit->size > free_block->size)
+        {
+            best_fit_prev = prev;
+            best_fit = free_block;
+        }
+        
+        prev = free_block;
+        free_block = block_next_free_block(free_block);
+    }
+
+    if(best_fit)
+    {
+        if(!best_fit_prev)
+        {
+            heap->free_list = block_next_free_block(best_fit);
+        }
+        else
+        {
+            Block **next = (Block **)((u8 *)best_fit_prev + sizeof(Block));
+            *next = block_next_free_block(best_fit);
+        }
+    }
+
+    return best_fit;
 }
 
 u8 *heap_alloc(Heap *heap, u64 size)
 {
     u64 size_a = align8(size);
-    
-    while(heap->free_list)
+    if(Block *block = heap_best_fit(heap, size_a))
     {
-        Block *free_block = (Block *)heap->free_list;
-
-        (void)free_block;
-
-        heap->free_list = heap_next_free_block(heap);
+        block_set_used(block);
+        u8 *data = (u8 *)block + sizeof(Block);
+        return data;
     }
 
     u64 alloc_size = sizeof(Block) + size_a;
@@ -196,24 +232,41 @@ int main()
     *b = 231;
     heap_free(&heap, a);
     heap_free(&heap, b);
+    
+    u8 *c = heap_alloc(&heap, 3);
+    Block *cb = block_get_from(c);
+    u8 *d = heap_alloc(&heap, 17);
+    Block *db = block_get_from(d);
+    heap_free(&heap, d);
 
     printf("------------------------\n");
     printf("-     memory test      -\n");
     printf("------------------------\n");
     
 
-    while(heap.free_list)
+    Block *free_block = heap.free_list;
+    while(free_block)
     {
-        Block *free_block = (Block *)heap.free_list;
-
         printf("block header size = %lld\n", sizeof(Block));
         printf("block size  = %lld\n", block_get_size(free_block));
         printf("block free  = %d\n", block_is_free(free_block));
         printf("block vaule = %p\n", *(Block **)((u8 *)free_block + sizeof(Block)));
         printf("------------------------\n");
 
-        heap.free_list = heap_next_free_block(&heap);
+        free_block= block_next_free_block(free_block);
     }
+
+    printf("c header size = %lld\n", sizeof(Block));
+    printf("c size  = %lld\n", block_get_size(cb));
+    printf("c free  = %d\n", block_is_free(cb));
+    printf("c vaule = %p\n", *(Block **)((u8 *)cb + sizeof(Block)));
+    printf("------------------------\n");
+
+    printf("d header size = %lld\n", sizeof(Block));
+    printf("d size  = %lld\n", block_get_size(db));
+    printf("d free  = %d\n", block_is_free(db));
+    printf("d vaule = %p\n", *(Block **)((u8 *)db + sizeof(Block)));
+    printf("------------------------\n");
     
     printf("heap base  = %p\n", heap.base);
     printf("heap size  = %lld\n", heap.size);
