@@ -18,9 +18,11 @@ typedef int64_t s64;
 #define MB(n) (n * 1024LL * 1024LL)
 #define GB(n) (n * 1024LL * 1024LL * 1024LL)
 
+#define BLOCK_MINIMUN_SIZE (sizeof(Block) + sizeof(u64))
+
 inline u64 align8(u64 size)
 {
-    u64 size_align = (size + 0x7) & ~0x7;
+    u64 size_align = (size + sizeof(u64)-1) & ~(sizeof(u64)-1);
     return size_align;
 }
 
@@ -110,6 +112,36 @@ Block *block_get_from(u8 *data)
     return block;
 }
 
+inline void block_set_next_free_block(Block *block, Block *next)
+{
+    Block **block_next = (Block **)((u8 *)block + sizeof(Block));
+    *block_next = next;
+}
+
+inline Block *block_next_free_block(Block *block)
+{
+    return *(Block **)((u8 *)block + sizeof(Block));
+}
+
+void block_try_split(Block *block, u64 size)
+{
+    u64 block_size = block_get_size(block);
+    u64 new_block_size = block_size - size;
+    if(new_block_size >= BLOCK_MINIMUN_SIZE)
+    {
+        printf("splitting!\n");
+        Block *new_block = (Block *)((u8 *)block + sizeof(Block) + size);
+        
+        new_block->size = new_block_size - sizeof(Block);
+        block_set_free(new_block);
+        block_set_next_free_block(new_block, block_next_free_block(block)); 
+        
+        block_set_next_free_block(block, new_block); 
+        block->size = size;
+        block_is_free(block);
+    }
+}
+
 struct Heap
 {
     u8 *base;
@@ -130,25 +162,22 @@ Heap heap_create(Memory *mem, u64 size)
     return heap;
 }
 
-inline Block *block_next_free_block(Block *block)
-{
-    return *(Block **)((u8 *)block + sizeof(Block));
-}
-
 Block *heap_best_fit(Heap *heap, u64 size)
 {
     Block *free_block = heap->free_list;
     Block *prev = 0;
     Block *best_fit = 0;
     Block *best_fit_prev = 0;
+    
     while(free_block)
     {
-        if(!best_fit && free_block->size >= size)
+        u64 free_block_size = block_get_size(free_block);
+        if(!best_fit && (free_block_size >= size))
         {
             best_fit_prev = prev;
             best_fit = free_block;
         } 
-        else if(best_fit && free_block->size >= size && best_fit->size > free_block->size)
+        else if(best_fit && (free_block_size >= size) && (block_get_size(best_fit) > free_block_size))
         {
             best_fit_prev = prev;
             best_fit = free_block;
@@ -160,14 +189,15 @@ Block *heap_best_fit(Heap *heap, u64 size)
 
     if(best_fit)
     {
+        block_try_split(best_fit, size);
+
         if(!best_fit_prev)
         {
             heap->free_list = block_next_free_block(best_fit);
         }
         else
         {
-            Block **next = (Block **)((u8 *)best_fit_prev + sizeof(Block));
-            *next = block_next_free_block(best_fit);
+            block_set_next_free_block(best_fit_prev, block_next_free_block(best_fit));
         }
     }
 
@@ -227,22 +257,22 @@ int main()
     Arena arena = arena_create(&memory, MB(128));
 
     u8 *a = heap_alloc(&heap, 1);
-    *a = 123;
-    u8 *b = heap_alloc(&heap, 9);
-    *b = 231;
-    heap_free(&heap, a);
+    Block *ab = block_get_from(a);
+    
+    u8 *b = heap_alloc(&heap, 64);
+    Block *bb = block_get_from(b);
+    
     heap_free(&heap, b);
     
     u8 *c = heap_alloc(&heap, 3);
     Block *cb = block_get_from(c);
-    u8 *d = heap_alloc(&heap, 17);
+    
+    u8 *d = heap_alloc(&heap, 40);
     Block *db = block_get_from(d);
-    heap_free(&heap, d);
 
     printf("------------------------\n");
-    printf("-     memory test      -\n");
+    printf("-       free list      -\n");
     printf("------------------------\n");
-    
 
     Block *free_block = heap.free_list;
     while(free_block)
@@ -253,8 +283,25 @@ int main()
         printf("block vaule = %p\n", *(Block **)((u8 *)free_block + sizeof(Block)));
         printf("------------------------\n");
 
-        free_block= block_next_free_block(free_block);
+        free_block = block_next_free_block(free_block);
     }
+    
+    printf("------------------------\n");
+    printf("-     memory test      -\n");
+    printf("------------------------\n");
+
+    
+    printf("a header size = %lld\n", sizeof(Block));
+    printf("a size  = %lld\n", block_get_size(ab));
+    printf("a free  = %d\n", block_is_free(ab));
+    printf("a vaule = %p\n", *(Block **)((u8 *)ab + sizeof(Block)));
+    printf("------------------------\n");
+
+    printf("b header size = %lld\n", sizeof(Block));
+    printf("b size  = %lld\n", block_get_size(bb));
+    printf("b free  = %d\n", block_is_free(bb));
+    printf("b vaule = %p\n", *(Block **)((u8 *)bb + sizeof(Block)));
+    printf("------------------------\n");
 
     printf("c header size = %lld\n", sizeof(Block));
     printf("c size  = %lld\n", block_get_size(cb));
@@ -266,6 +313,10 @@ int main()
     printf("d size  = %lld\n", block_get_size(db));
     printf("d free  = %d\n", block_is_free(db));
     printf("d vaule = %p\n", *(Block **)((u8 *)db + sizeof(Block)));
+    printf("------------------------\n");
+
+    printf("------------------------\n");
+    printf("-     memory info      -\n");
     printf("------------------------\n");
     
     printf("heap base  = %p\n", heap.base);
