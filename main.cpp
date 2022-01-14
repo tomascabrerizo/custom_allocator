@@ -129,7 +129,6 @@ void block_try_split(Block *block, u64 size)
     u64 new_block_size = block_size - size;
     if(new_block_size >= BLOCK_MINIMUN_SIZE)
     {
-        printf("splitting!\n");
         Block *new_block = (Block *)((u8 *)block + sizeof(Block) + size);
         
         new_block->size = new_block_size - sizeof(Block);
@@ -232,9 +231,44 @@ u8 *heap_alloc(Heap *heap, u64 size)
     return data;
 }
 
+void heap_remove_from_freelist(Heap *heap, Block *block)
+{
+    Block *free_block = heap->free_list;
+    Block *free_block_prev = 0;
+    while(free_block)
+    {
+        if(block == free_block)
+        {
+            if(!free_block_prev)
+            {
+                heap->free_list = block_next_free_block(block);
+            }
+            else
+            {
+                block_set_next_free_block(free_block_prev, block_next_free_block(block));
+            }
+            break;
+        }
+        
+        free_block_prev = free_block;
+        free_block = block_next_free_block(free_block);
+    }
+}
+
+void heap_try_to_merge_block(Heap *heap, Block *block)
+{
+    Block *block_next = block->next;
+    if(block_next && block_is_free(block_next))
+    {
+        block->size += (sizeof(Block) + block_get_size(block_next));
+        heap_remove_from_freelist(heap, block_next);
+    }
+}
+
 void heap_free(Heap *heap, u8 *data)
 {
     Block *block = block_get_from(data);
+    heap_try_to_merge_block(heap, block);
     block_set_free(block);
      
     Block **next = (Block **)data;
@@ -263,6 +297,7 @@ int main()
     Block *bb = block_get_from(b);
     
     heap_free(&heap, b);
+    heap_free(&heap, a);
     
     u8 *c = heap_alloc(&heap, 3);
     Block *cb = block_get_from(c);
