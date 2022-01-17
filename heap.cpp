@@ -52,7 +52,7 @@ u8 *Heap::malloc(u64 size)
     {
         try_to_split_block(block, size); 
         remove_block_from_freelist(block);
-        block->set_used(false);
+        block->set_used(true);
         return block->get_data();
     }
     
@@ -176,7 +176,7 @@ void Heap::try_to_split_block(Block *block, u64 size)
 void Heap::split_block(Block *block, u64 size, u64 new_block_size)
 {
     Block *new_block = (Block *)(block->get_data() + size);
-    new_block->set_used(true);
+    new_block->set_used(false);
     new_block->set_size(new_block_size - sizeof(Block));
     insert_block_after(block, new_block);
     insert_block_after_freelist(block, new_block);
