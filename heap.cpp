@@ -220,7 +220,7 @@ Block *Heap::try_to_merge_block_left(Block *block)
     if(left_block && !left_block->is_used())
     {
         u64 total_size = block->get_size() + sizeof(Block);
-        left_block->set_size(block->get_size() + total_size);
+        left_block->set_size(left_block->get_size() + total_size);
         remove_block(block);
         block = left_block;
     }
