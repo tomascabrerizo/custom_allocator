@@ -210,6 +210,7 @@ void Heap::try_to_merge_block_right(Block *block)
     {
         u64 total_size = right_block->get_size() + sizeof(Block);
         block->set_size(block->get_size() + total_size);
+        remove_block_from_freelist(right_block);
         remove_block(right_block);
     }
 }
@@ -221,6 +222,7 @@ Block *Heap::try_to_merge_block_left(Block *block)
     {
         u64 total_size = block->get_size() + sizeof(Block);
         left_block->set_size(left_block->get_size() + total_size);
+        remove_block_from_freelist(block);
         remove_block(block);
         block = left_block;
     }
