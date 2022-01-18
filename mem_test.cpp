@@ -1,55 +1,56 @@
 #include "heap.h"
+#include "profiler.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 struct Entity
-{
-    f32 x, y;
-    f32 vx, vy;
-};
-
-struct BigEntity
 {
     f32 x, y;
     u64 data[256];
 };
 
+struct BigEntity
+{
+    f32 x, y;
+    u64 data[1024];
+};
+
 int main()
 {
-    printf("size of Entity = %lld\n", sizeof(Entity));
-    
     mem::Memory memory(MB(256));
     mem::Arena arena(&memory, MB(128)); 
     mem::Heap heap(&memory, MB(128));
-    
-    Entity *e1 = (Entity *)heap.malloc(sizeof(Entity));
-    Entity *e2 = (Entity *)heap.malloc(sizeof(Entity));
-    Entity *e3 = (Entity *)heap.malloc(sizeof(Entity));
-    Entity *e4 = (Entity *)heap.malloc(sizeof(Entity));
-    BigEntity *e5 = (BigEntity *)heap.malloc(sizeof(BigEntity));
-    Entity *e6 = (Entity *)heap.malloc(sizeof(Entity));
-    Entity *e7 = (Entity *)heap.malloc(sizeof(Entity));
-    Entity *e8 = (Entity *)heap.malloc(sizeof(Entity));
 
-    heap.free((u8 *)e3);
+#define GLOBAL_ALLOC 0
+#define CUSTOM_ALLOC 1
+    os::Profiler prof;
+
+    prof.start(GLOBAL_ALLOC);
+    for(u32 i = 0; i < 1000; ++i)
+    {
+        Entity *e1 = (Entity *)malloc(sizeof(Entity));
+        BigEntity *e2 = (BigEntity *)malloc(sizeof(BigEntity));
+        free(e1);
+        free(e2);
+    }
+    prof.stop(GLOBAL_ALLOC);
+    
+    prof.start(CUSTOM_ALLOC);
+    for(u32 i = 0; i < 1000; ++i)
+    {
+        Entity *e1 = (Entity *)heap.malloc(sizeof(Entity));
+        BigEntity *e2 = (BigEntity *)heap.malloc(sizeof(BigEntity));
+        heap.free((u8 *)e1);
+        heap.free((u8 *)e2);
+    }
+    prof.stop(CUSTOM_ALLOC);
+    
+    printf("global allocator takes:\n");
+    prof.print(GLOBAL_ALLOC);
+    printf("custom allocator takes:\n");
+    prof.print(CUSTOM_ALLOC);
 
     heap.debug_print_state();
-
-    heap.free((u8 *)e4);
-
-    heap.debug_print_state();
-    
-    heap.free((u8 *)e2);
-    
-    heap.debug_print_state();
-
-    (void)e1;
-    (void)e2;
-    (void)e3;
-    (void)e4;
-    (void)e5;
-    (void)e6;
-    (void)e7;
-    (void)e8;
-    
+     
     return 0;
 }

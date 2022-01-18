@@ -40,6 +40,7 @@ u64 Block::get_size()
 Heap::Heap(Memory *mem, u64 size) :
     Arena(mem, size)
 {
+    _bottom = 0;
     _top = 0;
     _freelist = 0;
 }
@@ -63,32 +64,12 @@ u8 *Heap::malloc(u64 size)
     return block->get_data();
 }
 
-void Heap::remove_block_from_freelist(Block *block)
-{
-    if(!block->_prev_free)
-    {
-        _freelist = block->_next_free;
-    }
-    else if(!block->_next_free)
-    {
-        Block *prev = block->_prev_free; 
-        prev->_next_free = 0;
-    }
-    else
-    {
-        Block *prev = block->_prev_free; 
-        Block *next = block->_next_free;
-        prev->_next_free = next;
-        next->_prev_free = prev;
-    }
-}
-
 void Heap::free(u8 *base)
 {
     Block *block = get_block_from_data(base);
-    try_to_merge_block(block);
-    block->set_used(false);
     add_block_to_freelist(block);
+    block = try_to_merge_block(block);
+    block->set_used(false);
 }
 
 void Heap::add_block(Block *block, u64 size)
@@ -100,6 +81,11 @@ void Heap::add_block(Block *block, u64 size)
     block->_next_free = 0;
     block->_prev_free = 0;
     
+    if(!_bottom)
+    {
+        _bottom = block;
+    }
+
     if(_top)
     {
         _top->_next = block;
@@ -239,12 +225,13 @@ void Heap::remove_block(Block *block)
 {
     if(!block->_prev)
     {
-        _top = block->_next;
+        _bottom = block->_next;
+        if(_bottom) _bottom->_prev = 0;
     }
     else if(!block->_next)
     {
-        Block *prev = block->_prev; 
-        prev->_next = 0;
+        _top = block->_prev; 
+        _top->_next = 0;
     }
     else
     {
@@ -253,7 +240,34 @@ void Heap::remove_block(Block *block)
         prev->_next = next;
         next->_prev = prev;
     }
+    block->_prev = 0;
+    block->_next = 0;
 }
+
+
+void Heap::remove_block_from_freelist(Block *block)
+{
+    if(!block->_prev_free)
+    {
+        _freelist = block->_next_free;
+        if(_freelist) _freelist->_prev_free = 0; 
+    }
+    else if(!block->_next_free)
+    {
+        Block *prev = block->_prev_free; 
+        prev->_next_free = 0;
+    }
+    else
+    {
+        Block *prev = block->_prev_free; 
+        Block *next = block->_next_free;
+        prev->_next_free = next;
+        next->_prev_free = prev;
+    }
+    block->_prev_free = 0;
+    block->_next_free = 0;
+}
+
 
 void Heap::debug_print_block(Block *block)
 {
