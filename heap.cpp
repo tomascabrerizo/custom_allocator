@@ -179,6 +179,7 @@ void Heap::insert_block_after(Block *block, Block *other_block)
     other_block->_next = block->_next;
     other_block->_prev = block;
     block->_next = other_block;
+    if(block == _top) _top = other_block;
 }
 
 void Heap::insert_block_after_freelist(Block *block, Block *other_block)
