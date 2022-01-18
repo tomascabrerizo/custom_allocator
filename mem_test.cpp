@@ -26,7 +26,7 @@ int main()
     os::Profiler prof;
 
     prof.start(GLOBAL_ALLOC);
-    for(u32 i = 0; i < 1000; ++i)
+    for(u32 i = 0; i < 3000; ++i)
     {
         Entity *e1 = (Entity *)malloc(sizeof(Entity));
         BigEntity *e2 = (BigEntity *)malloc(sizeof(BigEntity));
@@ -36,7 +36,7 @@ int main()
     prof.stop(GLOBAL_ALLOC);
     
     prof.start(CUSTOM_ALLOC);
-    for(u32 i = 0; i < 1000; ++i)
+    for(u32 i = 0; i < 3000; ++i)
     {
         Entity *e1 = (Entity *)heap.malloc(sizeof(Entity));
         BigEntity *e2 = (BigEntity *)heap.malloc(sizeof(BigEntity));
@@ -50,7 +50,7 @@ int main()
     printf("custom allocator takes:\n");
     prof.print(CUSTOM_ALLOC);
 
-    heap.debug_print_state();
+    //heap.debug_print_state();
      
     return 0;
 }
