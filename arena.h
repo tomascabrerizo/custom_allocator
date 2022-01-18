@@ -13,7 +13,7 @@ public:
     ~Arena() = default;
     u8 *push_size(u64 size);
     void free_size(u64 size);
-private:
+protected:
     u8 *_base;
     u64 _used;
     u64 _size;

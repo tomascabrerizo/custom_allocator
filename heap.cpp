@@ -1,4 +1,5 @@
 #include "heap.h"
+#include <stdio.h>
 
 namespace mem
 {
@@ -10,15 +11,15 @@ void Block::set_used(bool used)
 
 bool Block::is_used()
 {
-    return _size & 0x1;
+    return !(_size & 0x1);
 }
 
 void Block::set_size(u64 size)
 {
-    if(is_used())
+    if(!is_used())
     {
         _size = size;
-        set_used(true);
+        set_used(false);
     }
     else
     {
@@ -129,6 +130,11 @@ Block *Heap::get_first_fit_from_freelist(u64 size)
 Block *Heap::get_best_fit_from_freelist(u64 size)
 {
     Block *best_block = get_first_fit_from_freelist(size);
+    if(!best_block)
+    {
+        return 0;
+    }
+    
     Block *block = best_block->_next_free;
     while(block)
     {
@@ -247,6 +253,29 @@ void Heap::remove_block(Block *block)
         prev->_next = next;
         next->_prev = prev;
     }
+}
+
+void Heap::debug_print_block(Block *block)
+{
+    printf("    size:   %lld\n", block->get_size()); 
+    printf("    used:   %d\n", block->is_used()); 
+    printf("    data:   %lld\n", *(u64 *)block->get_data()); 
+}
+
+void Heap::debug_print_state()
+{
+    u32 count = 0;
+    Block *block = (Block *)_base;
+
+    printf("memory info:\n");
+    while(block)
+    {
+        printf("--------block: %d----------\n", ++count);
+        debug_print_block(block);
+        block = block->_next;
+        printf("---------------------------\n");
+    }
+    printf("\n\n");
 }
 
 };

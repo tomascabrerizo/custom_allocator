@@ -33,6 +33,10 @@ public:
     
     u8 *malloc(u64 size);
     void free(u8 *base);
+
+    void debug_print_block(Block *block);
+    void debug_print_state();
+
 private:
     
     Block *_top;

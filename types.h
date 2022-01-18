@@ -13,4 +13,11 @@ typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
 
+typedef float  f32;
+typedef double f64;
+
+#define KB(n) (n * 1024LL)
+#define MB(n) (n * 1024LL * 1024LL)
+#define GB(n) (n * 1024LL * 1024LL * 1024LL)
+
 #endif // TYPES_H
