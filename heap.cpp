@@ -40,7 +40,6 @@ u64 Block::get_size()
 Heap::Heap(Memory *mem, u64 size) :
     Arena(mem, size)
 {
-    _bottom = 0;
     _top = 0;
     _freelist = 0;
 }
@@ -81,11 +80,6 @@ void Heap::add_block(Block *block, u64 size)
     block->_next_free = 0;
     block->_prev_free = 0;
     
-    if(!_bottom)
-    {
-        _bottom = block;
-    }
-
     if(_top)
     {
         _top->_next = block;
@@ -224,12 +218,7 @@ Block *Heap::try_to_merge_block_left(Block *block)
 
 void Heap::remove_block(Block *block)
 {
-    if(!block->_prev)
-    {
-        _bottom = block->_next;
-        if(_bottom) _bottom->_prev = 0;
-    }
-    else if(!block->_next)
+    if(!block->_next)
     {
         _top = block->_prev; 
         _top->_next = 0;

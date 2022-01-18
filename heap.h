@@ -39,7 +39,6 @@ public:
 
 private:
     
-    Block *_bottom;
     Block *_top;
     Block *_freelist;
 
