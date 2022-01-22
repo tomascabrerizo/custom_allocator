@@ -12,6 +12,8 @@ inline u64 align8(u64 size)
     return size_align;
 }
 
+void safe_memcpy(void *dst, void *src, u64 number_bytes);
+
 struct Memory
 {
     Memory(u64 size);

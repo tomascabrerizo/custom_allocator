@@ -42,7 +42,7 @@ int main()
     prof.start(CUSTOM_ALLOC);
     for(u32 i = 0; i < TEST_COUNT; ++i)
     {
-        ce_ptr[i] = (Entity *)heap.malloc(sizeof(Entity));
+        ce_ptr[i] = (Entity *)heap.allocate(sizeof(Entity));
     }
     prof.stop(CUSTOM_ALLOC);
     
