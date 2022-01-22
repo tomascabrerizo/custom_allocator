@@ -10,10 +10,44 @@ namespace mem
 
 struct Block
 {
+    /*@docs------------------------------------------------
+    [FNC]:  - Block::set_used(bool used)
+    [DES]:  - set last bit of size to 1 if the block is free and 0 if is used 
+    [IN ]:
+            - used (bool): false for free and true for used
+    -----------------------------------------------------*/
     void set_used(bool used);
+
+    /*@docs------------------------------------------------
+    [FNC]:  - Block::is_used()
+    [DES]:  - returns if the block is used or free 
+    [OUT]:  
+            - used (bool): returns if the block is used or free 
+    -----------------------------------------------------*/
     bool is_used();
+
+    /*@docs------------------------------------------------
+    [FNC]:  - Block::set_size()
+    [DES]:  - set the size of a block without modifying the used state 
+    [IN ]:
+            - size (u64): size of the block
+    -----------------------------------------------------*/
     void set_size(u64 size);
+
+    /*@docs------------------------------------------------
+    [FNC]:  - Block::get_size()
+    [DES]:  - return the size of a block 
+    [OUT]:
+            - size (u64): size of the block
+    -----------------------------------------------------*/
     u64 get_size();
+
+    /*@docs------------------------------------------------
+    [FNC]:  - Block::get_data()
+    [DES]:  - returns the valid user memory in the block 
+    [OUT]:
+            - data (u8 *): pointer to the valid user memory in the block
+    -----------------------------------------------------*/
     u8 *get_data();
     
     Block *_next;

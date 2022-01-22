@@ -6,19 +6,37 @@ namespace mem
 
 ///////////////////////////////////////////////////////
 //      Block methods:
-//
+//      Public interface
 ///////////////////////////////////////////////////////
 
+/*@docs------------------------------------------------
+[FNC]:  - Block::set_used(bool used)
+[DES]:  - set last bit of size to 1 if the block is free and 0 if is used 
+[IN ]:
+        - used (bool): false for free and true for used
+-----------------------------------------------------*/
 void Block::set_used(bool used)
 {
     used == false ? _size |= 0x1 : _size &= ~0x1;
 }
 
+/*@docs------------------------------------------------
+[FNC]:  - Block::is_used()
+[DES]:  - returns if the block is used or free 
+[OUT]:  
+        - used (bool): returns if the block is used or free 
+-----------------------------------------------------*/
 bool Block::is_used()
 {
     return !(_size & 0x1);
 }
 
+/*@docs------------------------------------------------
+[FNC]:  - Block::set_size()
+[DES]:  - set the size of a block without modifying the used state 
+[IN ]:
+        - size (u64): size of the block
+-----------------------------------------------------*/
 void Block::set_size(u64 size)
 {
     if(!is_used())
@@ -32,14 +50,26 @@ void Block::set_size(u64 size)
     }
 }
 
-u8 *Block::get_data()
-{
-    return (u8 *)this + sizeof(Block);
-}
-
+/*@docs------------------------------------------------
+[FNC]:  - Block::get_size()
+[DES]:  - return the size of a block 
+[OUT]:
+        - size (u64): size of the block
+-----------------------------------------------------*/
 u64 Block::get_size()
 {
     return _size & ~0x1;
+}
+
+/*@docs------------------------------------------------
+[FNC]:  - Block::get_data()
+[DES]:  - returns the valid user memory in the block 
+[OUT]:
+        - data (u8 *): pointer to the valid user memory in the block
+-----------------------------------------------------*/
+u8 *Block::get_data()
+{
+    return (u8 *)this + sizeof(Block);
 }
 
 
@@ -161,7 +191,6 @@ u8 *Heap::reallocate(u8 *data, u64 size)
     return slow_realloc(block, size);
 }
 
-
 ///////////////////////////////////////////////////////
 //      Inline Heap methods:
 //      Private 
@@ -179,6 +208,14 @@ u8 *Heap::slow_realloc(Block *block, u64 size)
 
 // (Heap - Block) functions.
 
+
+/*@docs------------------------------------------------
+[FNC]:  - Heap::add_block(u64 size)
+[DES]:  - adds a new block in the heap list of size (size)
+[IN ]:
+        - block (Block *): pointer to the block to be added 
+        - size (u64): size of the new added block 
+-----------------------------------------------------*/
 void Heap::add_block(Block *block, u64 size)
 {
     block->set_size(size);
@@ -196,6 +233,13 @@ void Heap::add_block(Block *block, u64 size)
     _top = block;
 }
 
+/*@docs------------------------------------------------
+[FNC]:  - Heap::insert_block_after(Block *block, Block *other_block)
+[DES]:  - adds a new block in the heap list after the specify other_block 
+[IN ]:
+        - block (Block *): pointer to the block to be added 
+        - other_block (Block *): pointer to the block where we want to add the new one 
+-----------------------------------------------------*/
 void Heap::insert_block_after(Block *block, Block *other_block)
 {
     other_block->_next = block->_next;
@@ -204,6 +248,12 @@ void Heap::insert_block_after(Block *block, Block *other_block)
     if(block == _top) _top = other_block;
 }
 
+/*@docs------------------------------------------------
+[FNC]:  - Heap::remove_block(Block *block)
+[DES]:  - removes the specify block from the heap list 
+[IN ]:
+        - block (Block *): pointer to the block to be removed 
+-----------------------------------------------------*/
 void Heap::remove_block(Block *block)
 {
     if(!block->_next)
@@ -222,12 +272,27 @@ void Heap::remove_block(Block *block)
     block->_next = 0;
 }
 
+/*@docs------------------------------------------------
+[FNC]:  - Heap::get_block_from_data(u8 *data)
+[DES]:  - returns a pointer to the block from the user valid memory of the block 
+[IN ]:
+        - data (u8 *): pointer to the user memory 
+[OUT]:
+        - block (Block *): pointer to the heap block 
+-----------------------------------------------------*/
 Block *Heap::get_block_from_data(u8 *data)
 {
     Block *block = (Block *)(data - sizeof(Block));
     return block;
 }
 
+/*@docs------------------------------------------------
+[FNC]:  - Heap::resize_block(Block *block, u64 size)
+[DES]:  - relly fast block resize, only use if the block is the last element in the heap list 
+[IN ]:
+        - block (Block *): pointer to the heap block 
+        - size (u64): new size of the block 
+-----------------------------------------------------*/
 void Heap::resize_block(Block *block, u64 size)
 {
     s64 size_diff = (s64)size - (s64)block->get_size();
@@ -235,11 +300,27 @@ void Heap::resize_block(Block *block, u64 size)
     block->set_size(size);
 }
 
+/*@docs------------------------------------------------
+[FNC]:  - Heap::last_allocated_block(Block *block)
+[DES]:  - return if the block is the last allocated block
+[IN ]:
+        - block (Block *): pointer to the heap block 
+[OUT]:
+        - last (bool): if the block is the last allocated
+-----------------------------------------------------*/
 bool Heap::last_allocated_block(Block *block)
 {
     return _top == block;
 }
 
+/*@docs------------------------------------------------
+[FNC]:  - Heap::try_to_merge_block(Block *block)
+[DES]:  - try to merge the block with the _next or _prev block if one of those are free
+[IN ]:
+        - block (Block *): pointer to the heap block 
+[OUT]:
+        - block (Block *): pointer to the block, (if the block merge with _prev, it will be different)
+-----------------------------------------------------*/
 Block *Heap::try_to_merge_block(Block *block)
 {
     try_to_merge_block_right(block);
@@ -273,6 +354,13 @@ Block *Heap::try_to_merge_block_left(Block *block)
     return block;
 }
 
+/*@docs------------------------------------------------
+[FNC]:  - Heap::try_to_split_block(Block *block, u64 size)
+[DES]:  - if the block size is larger than size, it will try to split it in a small block
+[IN ]:
+        - block (Block *): pointer to the heap block 
+        - size (u64): new block size
+-----------------------------------------------------*/
 void Heap::try_to_split_block(Block *block, u64 size)
 {
     u64 block_size = block->get_size();
