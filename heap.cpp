@@ -1,5 +1,6 @@
 #include "heap.h"
 #include <stdio.h>
+#include <cstring>
 
 namespace mem
 {
@@ -69,6 +70,71 @@ void Heap::free(u8 *base)
     add_block_to_freelist(block);
     block = try_to_merge_block(block);
     block->set_used(false);
+}
+
+inline bool next_block_have_size(Block *block, u64 size)
+{
+    if(block->_next)
+    {
+        return (block->get_size() + block->_next->get_size()) >= size;
+    }
+    return false;
+}
+
+inline bool prev_block_have_size(Block *block, u64 size)
+{
+    if(block->_prev)
+    {
+        return (block->get_size() + block->_prev->get_size()) >= size;
+    }
+    return false;
+}
+
+u8 *Heap::realloc(u8 *data, u64 size)
+{
+    Block *block = get_block_from_data(data);
+    u64 block_size = block->get_size();
+    if(block_size == size) return data;
+    
+    if(last_allocated_block(block))
+    {
+        resize_block(block, size);
+        return data;
+    }
+    else if(size > block_size)
+    {
+        if(next_block_have_size(block, size))
+        {
+            try_to_merge_block_right(block);
+            return data;
+        }
+        else if(prev_block_have_size(block, size))
+        {
+            block = try_to_merge_block_left(block);
+            return block->get_data();
+        }
+    }
+    return slow_realloc(block, size);
+}
+
+bool Heap::last_allocated_block(Block *block)
+{
+    return _top == block;
+}
+
+void Heap::resize_block(Block *block, u64 size)
+{
+    s64 size_diff = (s64)size - (s64)block->get_size();
+    push_offset(size_diff);
+    block->set_size(size);
+}
+
+u8 *Heap::slow_realloc(Block *block, u64 size)
+{
+    u8 *new_data = malloc(size);
+    std::memcpy(new_data, block->get_data(), block->get_size());
+    free(block->get_data());
+    return new_data;
 }
 
 void Heap::add_block(Block *block, u64 size)
@@ -234,7 +300,6 @@ void Heap::remove_block(Block *block)
     block->_next = 0;
 }
 
-
 void Heap::remove_block_from_freelist(Block *block)
 {
     if(!block->_prev_free)
@@ -272,12 +337,13 @@ void Heap::debug_print_state()
     Block *block = (Block *)_base;
 
     printf("memory info:\n");
+    printf("-----------------------------\n");
     while(block)
     {
-        printf("--------block: %d----------\n", ++count);
+        printf("-------- block: %d ----------\n", ++count);
         debug_print_block(block);
         block = block->_next;
-        printf("---------------------------\n");
+        printf("-----------------------------\n");
     }
     printf("\n\n");
 }

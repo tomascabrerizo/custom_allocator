@@ -28,4 +28,15 @@ void Arena::free_size(u64 size)
     _used -= size;
 }
 
+void Arena::push_offset(s64 offset)
+{
+    assert((u64)((s64)_used + (s64)offset) <= _size);
+    _used += (s64)offset;
+}
+
+u64 Arena::get_used()
+{
+    return _used;
+}
+
 };

@@ -13,10 +13,15 @@ public:
     ~Arena() = default;
     u8 *push_size(u64 size);
     void free_size(u64 size);
+
+    u64 get_used();
+    
 protected:
-    u8 *_base;
     u64 _used;
+    u8 *_base;
     u64 _size;
+
+    void push_offset(s64 offset);
 };
 
 };

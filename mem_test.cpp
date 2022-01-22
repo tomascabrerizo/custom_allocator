@@ -23,34 +23,46 @@ int main()
 
 #define GLOBAL_ALLOC 0
 #define CUSTOM_ALLOC 1
+#define ARENA_ALLOC 2
+
+#define TEST_COUNT 1500
+    static Entity *ge_ptr[TEST_COUNT];
+    static Entity *ce_ptr[TEST_COUNT];
+    static Entity *ae_ptr[TEST_COUNT];
+
     os::Profiler prof;
 
     prof.start(GLOBAL_ALLOC);
-    for(u32 i = 0; i < 500; ++i)
+    for(u32 i = 0; i < TEST_COUNT; ++i)
     {
-        Entity *e1 = (Entity *)malloc(sizeof(Entity));
-        BigEntity *e2 = (BigEntity *)malloc(sizeof(BigEntity));
-        //free(e1);
-        free(e2);
+        ge_ptr[i] = (Entity *)malloc(sizeof(Entity));
     }
     prof.stop(GLOBAL_ALLOC);
     
     prof.start(CUSTOM_ALLOC);
-    for(u32 i = 0; i < 500; ++i)
+    for(u32 i = 0; i < TEST_COUNT; ++i)
     {
-        Entity *e1 = (Entity *)heap.malloc(sizeof(Entity));
-        BigEntity *e2 = (BigEntity *)heap.malloc(sizeof(BigEntity));
-        //heap.free((u8 *)e1);
-        heap.free((u8 *)e2);
+        ce_ptr[i] = (Entity *)heap.malloc(sizeof(Entity));
     }
     prof.stop(CUSTOM_ALLOC);
     
+    prof.start(ARENA_ALLOC);
+    for(u32 i = 0; i < TEST_COUNT; ++i)
+    {
+        ae_ptr[i] = (Entity *)arena.push_size(sizeof(Entity));
+    }
+    prof.stop(ARENA_ALLOC);
+
     printf("global allocator takes:\n");
     prof.print(GLOBAL_ALLOC);
     printf("custom allocator takes:\n");
     prof.print(CUSTOM_ALLOC);
+    printf("arena allocator takes:\n");
+    prof.print(ARENA_ALLOC);
+    
+    //printf("\n");
+    //heap.debug_print_state();
+    printf("heap used %lld, arena used %lld\n", heap.get_used(), arena.get_used());
 
-    heap.debug_print_state();
-     
     return 0;
 }

@@ -33,6 +33,7 @@ public:
     
     u8 *malloc(u64 size);
     void free(u8 *base);
+    u8 *realloc(u8 *data, u64 size);
 
     void debug_print_block(Block *block);
     void debug_print_state();
@@ -45,6 +46,8 @@ private:
     void add_block(Block *block, u64 size);
     void remove_block(Block *block);
     Block *get_block_from_data(u8 *data);
+    bool last_allocated_block(Block *block);
+    void resize_block(Block *block, u64 size);
     
     Block *get_first_fit_from_freelist(u64 size);
     Block *get_best_fit_from_freelist(u64 size);
@@ -61,6 +64,8 @@ private:
     Block *try_to_merge_block(Block *block);
     void try_to_merge_block_right(Block *block);
     Block *try_to_merge_block_left(Block *block);
+
+    u8 *slow_realloc(Block *block, u64 size);
 };
 
 };
